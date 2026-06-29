@@ -1,0 +1,102 @@
+2025-06-30 15:26:53,508 - INFO - --- Starting Evaluation Simulation ---
+2025-06-30 15:26:53,508 - INFO - Using device: cuda:0
+2025-06-30 15:26:53,509 - INFO - Loading model from checkpoint: /path/to/your/pretrained_model.ckpt
+2025-06-30 15:26:54,509 - INFO - Model loaded successfully.
+2025-06-30 15:26:54,509 - INFO - 
+==================== Evaluating on: PDBind_v2020_refined ====================
+2025-06-30 15:26:56,513 - INFO - --- Results for PDBind_v2020_refined ---
+2025-06-30 15:26:56,513 - INFO - [Structural Metrics]
+2025-06-30 15:26:56,513 - INFO -   Overall RMSD                  : 2.0123
+2025-06-30 15:26:56,513 - INFO -   Ligand RMSD (L-RMSD)          : 2.1745
+2025-06-30 15:26:56,513 - INFO -   Side-chain RMSD (sc-RMSD)     : 0.2904
+2025-06-30 15:26:56,513 - INFO - [Success Rates (< 2Å)]
+2025-06-30 15:26:56,514 - INFO -   Overall Success Rate (%)      : 65.30%
+2025-06-30 15:26:56,514 - INFO -   Ligand Success Rate (%)       : 61.60%
+2025-06-30 15:26:56,514 - INFO -   Side-chain Success Rate (%)   : 70.50%
+2025-06-30 15:26:56,514 - INFO - [Functional (Affinity) Metrics]
+2025-06-30 15:26:56,514 - INFO -   PCC                           : 0.8201
+2025-06-30 15:26:56,514 - INFO -   Spearman                      : 0.8155
+2025-06-30 15:26:56,514 - INFO -   RMSE                          : 1.2033
+2025-06-30 15:26:56,514 - INFO -   MAE                           : 1.0012
+2025-06-30 15:26:56,514 - INFO - 
+==================== Evaluating on: CASF-2016 ====================
+2025-06-30 15:26:58,521 - INFO - --- Results for CASF-2016 ---
+2025-06-30 15:26:58,521 - INFO - [Structural Metrics]
+2025-06-30 15:26:58,521 - INFO -   Overall RMSD                  : 2.0123
+2025-06-30 15:26:58,521 - INFO -   Ligand RMSD (L-RMSD)          : 2.1745
+2025-06-30 15:26:58,521 - INFO -   Side-chain RMSD (sc-RMSD)     : 0.2904
+2025-06-30 15:26:58,521 - INFO - [Success Rates (< 2Å)]
+2025-06-30 15:26:58,521 - INFO -   Overall Success Rate (%)      : 65.30%
+2025-06-30 15:26:58,521 - INFO -   Ligand Success Rate (%)       : 61.60%
+2025-06-30 15:26:58,521 - INFO -   Side-chain Success Rate (%)   : 70.50%
+2025-06-30 15:26:58,522 - INFO - [Functional (Affinity) Metrics]
+2025-06-30 15:26:58,522 - INFO -   PCC                           : 0.8201
+2025-06-30 15:26:58,522 - INFO -   Spearman                      : 0.8155
+2025-06-30 15:26:58,522 - INFO -   RMSE                          : 1.2033
+2025-06-30 15:26:58,522 - INFO -   MAE                           : 1.0012
+2025-06-30 15:26:58,522 - INFO - 
+==================== Evaluating on: PoseBusters_benchmark ====================
+2025-06-30 15:27:00,528 - INFO - --- Results for PoseBusters_benchmark ---
+2025-06-30 15:27:00,528 - INFO - [Structural Metrics]
+2025-06-30 15:27:00,528 - INFO -   Overall RMSD                  : 1.7589
+2025-06-30 15:27:00,528 - INFO -   Ligand RMSD (L-RMSD)          : 2.1745
+2025-06-30 15:27:00,528 - INFO -   Side-chain RMSD (sc-RMSD)     : 0.2904
+2025-06-30 15:27:00,528 - INFO - [Success Rates (< 2Å)]
+2025-06-30 15:27:00,528 - INFO -   Overall Success Rate (%)      : 72.15%
+2025-06-30 15:27:00,528 - INFO -   Ligand Success Rate (%)       : 61.60%
+2025-06-30 15:27:00,528 - INFO -   Side-chain Success Rate (%)   : 70.50%
+2025-06-30 15:27:00,529 - INFO - [Functional (Affinity) Metrics]
+2025-06-30 15:27:00,529 - INFO -   (Not available for this dataset)
+2025-06-30 15:27:00,529 - INFO - 
+Evaluation simulation finished.
+2025-06-30 15:29:05,130 - INFO - --- Starting Evaluation Simulation ---
+2025-06-30 15:29:05,131 - INFO - Using device: cuda:0
+2025-06-30 15:29:05,131 - INFO - Loading model from checkpoint: checkpoints/train_20250417_112233/best_model_epoch_85.pt
+2025-06-30 15:29:06,132 - INFO - Model loaded successfully.
+2025-06-30 15:29:06,132 - INFO - 
+==================== Evaluating on: CASF2016-Drug ====================
+2025-06-30 15:29:08,135 - INFO - --- Results for CASF2016-Drug ---
+2025-06-30 15:29:08,135 - INFO - [Structural Metrics]
+2025-06-30 15:29:08,135 - INFO -   Overall RMSD                  : 2.0123
+2025-06-30 15:29:08,135 - INFO -   Ligand RMSD (L-RMSD)          : 2.1745
+2025-06-30 15:29:08,136 - INFO -   Side-chain RMSD (sc-RMSD)     : 0.2904
+2025-06-30 15:29:08,136 - INFO - [Success Rates (< 2Å)]
+2025-06-30 15:29:08,136 - INFO -   Overall Success Rate (%)      : 65.30%
+2025-06-30 15:29:08,136 - INFO -   Ligand Success Rate (%)       : 61.60%
+2025-06-30 15:29:08,136 - INFO -   Side-chain Success Rate (%)   : 70.50%
+2025-06-30 15:29:08,136 - INFO - [Functional (Affinity) Metrics]
+2025-06-30 15:29:08,136 - INFO -   PCC                           : 0.8201
+2025-06-30 15:29:08,136 - INFO -   Spearman                      : 0.8155
+2025-06-30 15:29:08,136 - INFO -   RMSE                          : 1.2033
+2025-06-30 15:29:08,136 - INFO -   MAE                           : 1.0012
+2025-06-30 15:29:08,136 - INFO - 
+==================== Evaluating on: CASF-2016 ====================
+2025-06-30 15:29:10,144 - INFO - --- Results for CASF-2016 ---
+2025-06-30 15:29:10,145 - INFO - [Structural Metrics]
+2025-06-30 15:29:10,145 - INFO -   Overall RMSD                  : 2.0123
+2025-06-30 15:29:10,145 - INFO -   Ligand RMSD (L-RMSD)          : 2.1745
+2025-06-30 15:29:10,145 - INFO -   Side-chain RMSD (sc-RMSD)     : 0.2904
+2025-06-30 15:29:10,145 - INFO - [Success Rates (< 2Å)]
+2025-06-30 15:29:10,145 - INFO -   Overall Success Rate (%)      : 65.30%
+2025-06-30 15:29:10,145 - INFO -   Ligand Success Rate (%)       : 61.60%
+2025-06-30 15:29:10,145 - INFO -   Side-chain Success Rate (%)   : 70.50%
+2025-06-30 15:29:10,145 - INFO - [Functional (Affinity) Metrics]
+2025-06-30 15:29:10,145 - INFO -   PCC                           : 0.8201
+2025-06-30 15:29:10,145 - INFO -   Spearman                      : 0.8155
+2025-06-30 15:29:10,145 - INFO -   RMSE                          : 1.2033
+2025-06-30 15:29:10,145 - INFO -   MAE                           : 1.0012
+2025-06-30 15:29:10,146 - INFO - 
+==================== Evaluating on: PoseBusters_benchmark ====================
+2025-06-30 15:29:12,153 - INFO - --- Results for PoseBusters_benchmark ---
+2025-06-30 15:29:12,153 - INFO - [Structural Metrics]
+2025-06-30 15:29:12,154 - INFO -   Overall RMSD                  : 1.7589
+2025-06-30 15:29:12,154 - INFO -   Ligand RMSD (L-RMSD)          : 2.1745
+2025-06-30 15:29:12,154 - INFO -   Side-chain RMSD (sc-RMSD)     : 0.2904
+2025-06-30 15:29:12,154 - INFO - [Success Rates (< 2Å)]
+2025-06-30 15:29:12,154 - INFO -   Overall Success Rate (%)      : 72.15%
+2025-06-30 15:29:12,154 - INFO -   Ligand Success Rate (%)       : 61.60%
+2025-06-30 15:29:12,154 - INFO -   Side-chain Success Rate (%)   : 70.50%
+2025-06-30 15:29:12,154 - INFO - [Functional (Affinity) Metrics]
+2025-06-30 15:29:12,154 - INFO -   (Not available for this dataset)
+2025-06-30 15:29:12,154 - INFO - 
+Evaluation simulation finished.

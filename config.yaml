@@ -1,0 +1,549 @@
+# /home/zdy/Project2/config.yaml
+
+# --------------------------
+# General Project Settings
+# --------------------------
+project_base_dir: '/home/zdy/Project2'
+
+# -------------------------------------
+# Multiprocessing Settings
+# -------------------------------------
+multiprocessing:
+  num_workers: 64   # Number of worker processes. null defaults to os.cpu_count().
+  chunk_size: 10    # Chunksize for multiprocessing Pool operations.
+
+# --------------------------
+# Section 1: Data Preprocessing Pipeline
+# --------------------------
+pipeline_tasks:
+  # --- 1. Protein Preparation (PDB -> PDBQT) ---
+  protein_preparation:
+    skip_if_exists: false
+    output_base_dir: "data/processed_data/predocking"
+    output_filename_template: "{pdb_id}_protein.pdbqt"
+    sources:
+      - name: "PDBbind_v2020"
+        input_dir: "data/PDBbind_v2020"
+        file_glob_pattern: "**/*_prot/*_p.pdb"
+        pdb_id_regex: "([a-zA-Z0-9]{4})_p\\.pdb"
+      - name: "CASF_v2016"
+        input_dir: "data/CASF_v2016"
+        file_glob_pattern: "**/*_protein.pdb"
+        pdb_id_regex: "/([a-zA-Z0-9]{4})/"
+
+  # --- 2. Drug Preparation (SDF -> PDBQT) ---
+  drug_preparation:
+    skip_if_exists: false
+    charge_model: "gasteiger"
+    output_base_dir: "data/processed_data/predocking"
+    output_filename_template: "{pdb_id}_ligand.pdbqt"
+    sources:
+      - name: "PDBbind_v2020"
+        input_dir: "data/PDBbind_v2020"
+      - name: "CASF_v2016"
+        input_dir: "data/CASF_v2016"
+
+  # --- 3. Vina Docking (PDBQTs -> PDBQT Complex) ---
+  docking_input:
+    data_path: "data/processed_data/predocking"
+    receptor_suffix: "_protein.pdbqt"
+    ligand_suffix: "_ligand.pdbqt"
+    skip_if_exists: true
+
+  # --- 4. Splitting (Complex -> Backbone/Sidechain/Ligand) ---
+  split_task:
+    # General settings
+    output_dir: "data/processed_data/split" # Unified output directory for all processed data
+    skip_if_exists: false                     # Skip PDB IDs if their output folder already exists
+
+    # --- Input Sources ---
+    sources:
+      # Source 1: PDBbind General Set
+      - name: "PDBbind"
+        base_dir: "data/PDBbind_v2020"
+        protein_glob: "**/*_prot/*_p.pdb"
+        protein_id_regex: "([a-zA-Z0-9]{4})_p\\.pdb"
+        complex_dir: "data/processed_data/predocking" # Docked results are here
+        complex_suffix: ".pdbqt"
+
+      # Source 2: Astex Diverse Set
+      - name: "Astex"
+        base_dir: "data/astex_diverse_set"
+        protein_glob: "**/*_protein.pdb"
+        protein_id_regex: "([a-zA-Z0-9]{4})_.*_protein\\.pdb"
+        complex_dir: "data/processed_data/predocking"
+        complex_suffix: ".pdbqt"
+
+      # Source 3: PoseBusters Benchmark Set
+      - name: "PoseBusters"
+        base_dir: "data/PoseBusters/posebusters_benchmark_set"
+        protein_glob: "**/*_protein.pdb"
+        protein_id_regex: "([a-zA-Z0-9]{4})_.*_protein\\.pdb"
+        complex_dir: "data/processed_data/predocking"
+        complex_suffix: ".pdbqt"
+
+    # --- Output Filename Suffixes ---
+    backbone_suffix: "_backbone.pdb"
+    sidechain_suffix: "_sidechain.pdb"
+    ligand_suffix: "_ligand.sdf"
+
+  # --- 5. Lennard-Jones Matrix Generation ---
+  lj_generation_task:
+    overwrite_existing: true
+    input_dir: "data/processed_data/split"
+    output_dir: "data/processed_data/LJ"
+    backbone_suffix: "_backbone.pdb"
+    sidechain_suffix: "_sidechain.pdb"
+    ligand_suffix: "_ligand.sdf"
+    use_gpu: true
+    gpu_device_id: 1
+    lj_params:
+      'C': [3.4, 0.12]
+      'N': [3.1, 0.16]
+      'O': [3.0, 0.20]
+      'S': [3.6, 0.25]
+      'F': [3.0, 0.09]
+      'CL': [3.5, 0.30]
+      'BR': [3.7, 0.35]
+      'P': [3.8, 0.20]
+      'I': [3.9, 0.40]
+    default_lj_params: [3.5, 0.1]
+
+  # --- 6. Physics/Geometry Label Generation ---
+  phy_geo_task:
+    overwrite_existing: true
+    output_dir: "data/processed_data/label"
+    initial_structure_dir: "data/processed_data/split"
+    split_file_templates:
+      backbone_suffix: "_backbone.pdb"
+      sidechain_suffix: "_sidechain.pdb"
+      ligand_suffix: "_ligand.sdf"
+    fallback_noise_scale: 1.0
+
+    data_sources:
+      - name: "PDBbind_v2020"
+        type: "pdb_sdf_pair"
+        input_dir: "data/PDBbind_v2020"
+      - name: "CASF_v2016"
+        type: "pdb_sdf_pair"
+        input_dir: "data/CASF_v2016"
+      - name: "Astex_Diverse_Set"
+        type: "pdb_sdf_pair"
+        input_dir: "data/astex_diverse_set"
+      - name: "PoseBusters_Benchmark"
+        type: "pdb_sdf_pair"
+        input_dir: "data/PoseBusters/posebusters_benchmark_set"
+
+    default_bond_length: 1.5
+    default_bond_angle_deg: 109.5
+
+    vdw_radii:
+      H: 1.20
+      C: 1.70
+      N: 1.55
+      O: 1.52
+      F: 1.47
+      P: 1.80
+      S: 1.80
+      Cl: 1.75
+
+    default_vdw_radius: 1.7
+
+    hbond_donors_smarts: '[$([N;!H0;v3,v4&+1]),$([O,S;H1;+0])]'
+    hbond_acceptors_smarts: '[$([O,S;H1;v2;!$(*-*=[O,N,P,S])]),$([O,S;H0;v2]),$([O,S,N;v3;!$(*-*=[O,N,P,S])]),$([N;v3;!H0;!$(*-*=[O,N,P,S])]),$([F,Cl,Br,I;v1;!H0])]'
+
+    pi_pi_distance_cutoff: 6.0
+    ring_normal_norm_threshold: 1.0e-6
+
+  # --- 7. Graph Feature Generation ---
+  backbone_graph_task:
+    overwrite_existing: false
+    input_dir: "data/processed_data/split"
+    backbone_suffix: "_backbone.pdb"
+    output_dir: "data/processed_data/graph"
+    seq_len_norm_factor: 1000.0
+    allowed_amino_acids: ['ALA','ARG','ASN','ASP','CYS','GLN','GLU','GLY','HIS','ILE','LEU','LYS','MET','PHE','PRO','SER','THR','TRP','TYR','VAL','UNK']
+    hydrophobicity_scale: {'ALA': 1.8, 'ARG': -4.5, 'ASN': -3.5, 'ASP': -3.5, 'CYS': 2.5, 'GLN': -3.5, 'GLU': -3.5, 'GLY': -0.4, 'HIS': -3.2, 'ILE': 4.5, 'LEU': 3.8, 'LYS': -3.9, 'MET': 1.9, 'PHE': 2.8, 'PRO': -1.6, 'SER': -0.8, 'THR': -0.7, 'TRP': -0.9, 'TYR': -1.3, 'VAL': 4.2, 'UNK': 0.0}
+
+  sidechain_graph_task:
+    overwrite_existing: false
+    input_dir: "data/processed_data/split"
+    sidechain_suffix: "_sidechain.pdb"
+    backbone_suffix: "_backbone.pdb"
+    output_dir: "data/processed_data/graph"
+    bond_perception_scale: 1.3
+    atom_symbols: ['C', 'N', 'O', 'S', 'P', 'F', 'Cl', 'Br', 'I', 'Other']
+    hybridization_types: ['SP', 'SP2', 'SP3', 'SP3D', 'SP3D2', 'S', 'UNSPECIFIED', 'OTHER']
+    bond_types: ['SINGLE', 'DOUBLE', 'TRIPLE', 'AROMATIC', 'UNSPECIFIED', 'OTHER']
+    chi_angle_definitions:
+      ARG: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'CD'], ['CB', 'CG', 'CD', 'NE'], ['CG', 'CD', 'NE', 'CZ']]
+      ASN: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'OD1']]
+      ASP: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'OD1']]
+      CYS: [['N', 'CA', 'CB', 'SG']]
+      GLN: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'CD'], ['CB', 'CG', 'CD', 'OE1']]
+      GLU: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'CD'], ['CB', 'CG', 'CD', 'OE1']]
+      HIS: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'ND1']]
+      ILE: [['N', 'CA', 'CB', 'CG1'], ['CA', 'CB', 'CG1', 'CD1']]
+      LEU: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'CD1']]
+      LYS: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'CD'], ['CB', 'CG', 'CD', 'CE'], ['CG', 'CD', 'CE', 'NZ']]
+      MET: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'SD'], ['CB', 'CG', 'SD', 'CE']]
+      PHE: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'CD1']]
+      PRO: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'CD'], ['CB', 'CG', 'CD', 'N']]
+      SER: [['N', 'CA', 'CB', 'OG']]
+      THR: [['N', 'CA', 'CB', 'OG1']]
+      TRP: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'CD1']]
+      TYR: [['N', 'CA', 'CB', 'CG'], ['CA', 'CB', 'CG', 'CD1']]
+      VAL: [['N', 'CA', 'CB', 'CG1']]
+
+  drug_graph_task:
+    overwrite_existing: true
+    input_dir: "data/processed_data/split"
+    ligand_suffix: "_ligand.sdf"
+    output_dir: "data/processed_data/graph"
+    atom_symbols: ['C', 'N', 'O', 'S', 'P', 'F', 'Cl', 'Br', 'I', 'H', 'Other']
+    hybridization_types: ['SP', 'SP2', 'SP3', 'SP3D', 'SP3D2', 'S', 'UNSPECIFIED', 'OTHER']
+    chiral_tags: ['CHI_UNSPECIFIED', 'CHI_TETRAHEDRAL_CW', 'CHI_TETRAHEDRAL_CCW', 'CHI_OTHER']
+    bond_types: ['SINGLE', 'DOUBLE', 'TRIPLE', 'AROMATIC', 'UNSPECIFIED', 'OTHER']
+
+# --------------------------------
+# Section 2: Dataset Splitting
+# --------------------------------
+dataset_split:
+  pdbbind_dir: "data/PDBbind_v2020"
+  pdbbind_index_file: "data/INDEX_general_PL_data.2020"
+  casf_dir: "data/CASF_v2016"
+  prepared_protein_dir: "data/processed_data/predocking"
+  posebusters_ids_file: "data/PoseBusters/posebusters_benchmark_set_ids.txt"
+  astex_ids_file: "data/astex_diverse_set/astex_diverse_set_ids.txt"
+
+  # --- Log File Paths for Filtering ---
+  docking_log_file: "logs/docking/docking_20250828_100952.log"
+  backbone_graph_log_file: "logs/backbone_graph/backbone_graph_20250830_000506.log"
+  docking_failure_regex: "ERROR -   PDB ID: (\\w{4}),"
+  backbone_failure_regex: "Reason: No input.*?IDs: ([a-zA-Z0-9, ]+)"
+
+  # --- Output and Temporary Directories ---
+  output_dir: "data"  # Main output directory for CSVs
+  temp_dir: "data/temp/split_temp"   # For temporary files like FASTA
+
+  # --- CD-HIT Clustering Configuration ---
+  cd_hit_executable_path: "/home/zdy/anaconda3/envs/FlexPose/bin/cd-hit"
+  cd_hit_identity: 0.9  # Sequence identity threshold (e.g., 0.9 for 90%)
+  cd_hit_threads: 8
+
+  # --- Train/Validation Split Configuration ---
+  validation_set_ratio: 0.2  # 20% of clusters will be used for validation
+  random_seed: 42
+
+# --------------------------------
+# Section 3: Model & Training Configuration
+# --------------------------------
+
+# --------------------------------
+# Model Architecture Configuration
+# --------------------------------
+model_params:
+  # --- Input Feature Dimensions ---
+  in_scalar_dim_bb: 23
+  in_scalar_dim_sc: 26
+  in_scalar_dim_drug: 29
+  in_edge_scalar_dim: 8
+
+  # --- Encoder Architecture (shared across all three encoders) ---
+  num_encoder_layers: 4
+  l_max_sh: 2
+  mlp_hidden_dims: [128, 128]
+
+  # --- Model Hidden Dimensions ---
+  hidden_scalar_dim: 128
+  hidden_vector_dim: 3   # This should almost always be 3 for 3D coordinates/vectors
+
+  # --- Prediction Heads ---
+  predict_affinity: true
+  affinity_mlp_hidden_dims: [128, 64]
+  noise_mlp_hidden_dims: [128]
+
+interaction_params:
+  embed_dim: 128
+  num_heads: 4
+  attention_query_chunk_size: 128
+  mlp_hidden_dims: [512]
+  mlp_activation: "ReLU"
+
+diffusion_params:
+  embed_dim: 128
+  num_timesteps: 50
+  schedule_type: 'linear'
+  beta_start: 0.0001
+  beta_end: 0.02
+  detach_z0_for_noise_loss: true
+  detach_condition_for_noise_loss: true
+  detach_pred_noise_for_structure: true
+  normalize_inputs: true
+  input_clip: 10.0
+  denoiser_mlp:
+    hidden_dims: [512, 512]
+    time_embed_dim: 128
+
+decoder_params:
+  embed_dim: 128
+  num_layers: 6
+  num_heads: 4
+  coord_update_aggregation: "mean"  # mean or add
+  coord_update_max_step: 0.5
+  coord_scale_init: 0.0
+  coord_scale_max: 0.01
+  detach_coordinate_update: false
+  detach_coordinate_features: true
+  direct_delta_enabled: true
+  direct_delta_include_position: true
+  direct_delta_detach_features: true
+  direct_delta_max_step: 1.0
+  direct_delta_scale_init: 0.1
+  direct_delta_scale_max: 1.0
+  direct_delta_mlp:
+    hidden_dims: [128, 128]
+  rbf:
+    num_kernels: 16
+    d_max: 20.0
+  message_mlp:
+    hidden_dims: [128, 128]
+  coord_weight_mlp:
+    hidden_dims: [128]
+
+# --------------------------------
+# Data Loading & Loss Configuration
+# --------------------------------
+data_loading:
+  graph_dir: "data/processed_data/graph"
+  labels_dir: "data/processed_data/label"
+  lj_dir: "data/processed_data/LJ"
+  combined_dir: "data/processed_data/combined_pt"
+  physical_combined_dir: "/workspace/guest/zdy/Project2/data/processed_data/combined_pt"
+  train_split_file: "data/train.csv"
+  val_split_file: "data/valid.csv"
+  load_lj_matrices: true
+  allow_missing_lj: true
+  use_phy_geo_labels: true
+  phy_geo_label_mode: "mapped"  # mapped or raw
+  phy_geo_drop_unmapped: true
+  phy_geo_nearest_max_distance: 0.2
+  coordinate_source: "graph_to_labels"  # labels, graph, or graph_to_labels
+  allow_coordinate_fallback: false
+  allow_group_coordinate_fallback: true
+  center_coordinates: true
+  max_load_attempts: 10
+  retry_on_error: true
+  log_load_errors: false
+  pin_memory: true
+  shuffle_train: true
+  drop_last: false
+  lj_backbone_atom_stride: 4
+  lj_backbone_ca_atom_offset: 1
+  r_init_noise_std: 1.0
+  r_init_noise_min_mse: 1.0e-6
+  r_init_noise_apply_to: "when_equal"  # never, when_equal, or always
+  r_init_noise_seed: 42
+  max_total_nodes: 6000
+  max_init_mse: 5.0
+  test_sets:
+    - name: "PDBbind_Core_Set"
+      path: "data/test.csv"
+    - name: "PoseBusters_Benchmark"
+      path: "data/posebusters.csv"
+
+data_combination:
+  overwrite: true
+
+total_loss:
+  weight_strategy: "static"
+  static_weights:
+    L_noise: 0.01
+    L_structure: 0.1
+    L_phy_geo: 0.0001
+  dynamic_weights:
+    epsilon: 1.0e-8
+    smoothing_factor: 0.1
+  params:
+    vdw:
+      chunk_size: 2048
+      use_checkpoint: false
+      compute_device: "cpu"
+    electrostatic:
+      distance_epsilon: 1.0e-6
+      chunk_size: 2048
+      use_checkpoint: false
+      compute_device: "cpu"
+    hbond:
+      dist_min: 2.5
+      dist_max: 3.2
+      angle_min_deg: 120.0
+      angle_max_deg: 180.0
+    pi_pi:
+      dist_min: 3.5
+      dist_max: 5.0
+      angle_max_deg: 30.0
+      disp_max: 3.5
+
+# --------------------------------
+# Training Configuration
+# --------------------------------
+training:
+  epochs: 200
+  batch_size: 1
+  learning_rate: 1e-6
+  weight_decay: 1.0e-5
+  coord_head_lr_multiplier: 1000.0
+  coord_head_weight_decay: 0.0
+  num_workers: 4
+  device: "cuda:0"
+  seed: 42
+  checkpoint_dir: "checkpoints/"
+  log_every_n_steps: 100
+  validate_every_n_epochs: 1
+  checkpoint_every_n_epochs: 1
+  resume_checkpoint: "checkpoints/model_20260530_184320_epoch_042_valloss_3.244693e01.pt"
+  resume_optimizer: true
+  resume_scheduler: true
+  resume_scaler: true
+  gradient_clip_norm: 1.0
+  use_amp: false
+  use_diffusion_refinement: false
+  build_global_graph_in_train: true
+  debug_model_forward_stages: false
+  max_global_edges: 50000
+  max_train_batches: 1000
+  max_val_batches: 200
+  cuda_alloc_conf: "max_split_size_mb:32"
+
+# ==============================================================================
+# Section 4: Other Configurations
+# ==============================================================================
+prepare_protein:
+  input_pdb_path: "/home/zdy/Project2/data/case/3APW.pdb"
+  output_protein_path: "/home/zdy/Project2/data/case/protein.pdb"
+  output_ligand_path: "/home/zdy/Project2/data/case/ligand.sdf"
+  ligand_residue_name: "STI"
+
+similarity_search:
+  database_directory: "/home/zdy/Project2/data/original_data/ZINC15/"
+  output_candidates_csv: "/home/zdy/Project2/data/case/HIV-1-Protease/HIV-1-Protease.csv"
+  similarity_threshold: 0.2
+  fingerprint_radius: 2
+  fingerprint_nbits: 2048
+  query_drugs:
+    Lopinavir: "CC(C)C(C(=O)NC(C(C)C)C(=O)N1C(C(CC2=CC=CC=C2)N(C)C(=O)NC(CC3=CC=CC=C3)C(O)CN4C1=O)C4)C"
+    Darunavir: "CC(C)CN(C[C@H](O)[C@H](CC1=CC=CC=C1)NC(=O)O[C@H]2C[C@H]3CO[C@H]23)S(=O)(=O)C4=CC=C(N)C=C4"
+    Saquinavir: "CC(C)(C)NC(=O)[C@H]1N2C[C@@H](O)[C@H](CC3=CC=CC=C3)N[C@H]2[C@H](C4=CC=CC=C4)C(=O)N1CC5=CC=CC=C5"
+    Ritonavir: "CC(C)C1=NC(=CS1)CN(C)C(=O)N[C@H](C(C)C)C(=O)N[C@@H](CC2=CC=CC=C2)C[C@H](O)CN(CC3=CC=CC=C3)C(=O)OCC4=CN=CS4"
+    Atazanavir: "CC(C)(C)NC(=O)[C@H](C(C)(C)C)N(C[C@H](O)[C@H](CC1=CC=CC=C1)N(C2=CC=CC=C2)C(=O)OC)C(=O)N[C@@H](CC3=CC=CC=C3)C4=CC=C(C=C4)N5C=CN=C5"
+    Tipranavir: "CC(C)C1=CC(=C(C(=C1O)S(=O)(=O)N2C[C@H](C(C)C)C[C@H]2O)C(C)C)C3=CC=C(C=C3)C(F)(F)F"
+
+mgltools:
+  pythonsh_path: "mgltools_x86_64Linux2_1.5.7/bin/pythonsh"
+  prepare_receptor_path: "mgltools_x86_64Linux2_1.5.7/MGLToolsPckgs/AutoDockTools/Utilities24/prepare_receptor4.py"
+  prepare_ligand_path: "mgltools_x86_64Linux2_1.5.7/MGLToolsPckgs/AutoDockTools/Utilities24/prepare_ligand4.py"
+
+vina_settings:
+  executable: '/home/zdy/anaconda3/envs/FlexPose/bin/vina'
+  center_x: 0.0
+  center_y: 0.0
+  center_z: 0.0
+  size_x: 25.0
+  size_y: 25.0
+  size_z: 25.0
+  exhaustiveness: 16
+  num_modes: 3
+  energy_range: 3.0
+  random_seed: 42
+  use_gpu: false
+  gpu_device_id: 0
+  cpu_threads: 1
+
+# --------------------------------
+# Section 5: Testing Configuration
+# --------------------------------
+testing:
+  checkpoint_path: "checkpoints/train_20250417_112233/best_model_epoch_85.pt"
+  batch_size: 16
+  test_on_sets: []
+
+# --------------------------------
+# Section 6: Logging Configuration
+# --------------------------------
+logging:
+  protein_prep:
+    log_dir: 'logs/protein_prep'
+    log_base_name: 'protein_preparation'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  drug_prep:
+    log_dir: 'logs/drug_prep'
+    log_base_name: 'drug_preparation'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  docking_log:
+    log_dir: 'logs/docking'
+    log_base_name: 'docking'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  split_log:
+    log_dir: 'logs/split'
+    log_base_name: 'split'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  lj_generate_log:
+    log_dir: 'logs/lj_generate'
+    log_base_name: 'LJ_generate'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  phy_geo_log:
+    log_dir: 'logs/phy_geo'
+    log_base_name: 'phy_geo'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  split_dataset:
+    log_dir: 'logs/split_dataset'
+    log_base_name: 'split_dataset'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  backbone_graph_log:
+    log_dir: 'logs/backbone_graph'
+    log_base_name: 'backbone_graph'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  sidechain_graph_log:
+    log_dir: 'logs/sidechain_graph'
+    log_base_name: 'sidechain_graph'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  drug_graph_log:
+    log_dir: 'logs/drug_graph'
+    log_base_name: 'drug_graph'
+    log_level: 'INFO'
+    use_timestamp_in_log_name: true
+  training_log:
+    log_level: "INFO"
+    log_dir: "logs/training"
+    log_base_name: "training"
+    use_timestamp_in_log_name: true
+  similarity_search_log:
+    log_dir: "logs/similarity_search"
+    log_base_name: "hiv_protease_search"
+    log_level: "INFO"
+    use_timestamp_in_log_name: true
+  prepare_protein:
+    log_dir: "logs/prepare_protein"
+    log_base_name: "prepare_protein"
+    log_level: "INFO"
+    use_timestamp_in_log_name: true
+  testing_log:
+    log_level: "INFO"
+    log_dir: "logs/test"
+    log_base_name: "test"
+    use_timestamp_in_log_name: true
+  combine_log:
+    log_level: "INFO"
+    log_dir: "logs/combine"
+    log_base_name: "combine"
+    use_timestamp_in_log_name: true
